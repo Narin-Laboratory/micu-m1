@@ -2,8 +2,13 @@
 #include "UdawaLogger.h"
 #include "UdawaSerialLogger.h"
 #include "Udawa.h"
+#include "UdawaConfig.h"
 
 struct Config {
+    SemaphoreHandle_t xSemaphoreGrowControl = NULL;
+    TaskHandle_t xHandleGrowControl;
+    BaseType_t xReturnedGrowControl;
+
     uint8_t pinledR = 25;
     uint8_t pinledG = 26;
     uint8_t pinledB = 27;
@@ -28,15 +33,20 @@ struct Config {
 
     uint8_t pumpPWMCutOff = 180;
 
-    unsigned long timer = millis();
-    unsigned long previousMillisGrowLight = 0;
-    unsigned long previousMillisPump = 0;
-    const unsigned long interval = 50; // 50ms interval for updates
-    bool growLightInProgress = false;
-    bool pumpInProgress = false;
-    int growLightStep = 0;
-    int pumpStep = 0;
+    unsigned long sowingTS = 0;
+    uint8_t selectedProfile = 0;
+    uint8_t mode = 0;
 };
+
+struct Profile {
+    uint8_t id;
+    String mame;
+    unsigned long incubationTS;
+};
+Profile profiles[20];
+
+GenericConfig configHelper("/micu.json");
+
 
 #ifdef USE_LOCAL_WEB_INTERFACE
 void _onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len);
@@ -48,3 +58,6 @@ void _processThingsboardSharedAttributesUpdate(const JsonObjectConst &data);
 void setColor(uint8_t r, uint8_t g, uint8_t b);
 void updateGrowLight();
 void updatePump();
+void _pvTaskCodeGrowControl(void*);
+void loadConfig();
+void saveConfig();

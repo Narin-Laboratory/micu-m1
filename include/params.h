@@ -40,6 +40,8 @@ const uint16_t IOT_FIRMWARE_PACKET_SIZE = 4096;
 #define USE_HW_RTC
 #endif
 
+#define GROW_CONTROL_STACKSIZE 4096UL
+
 const int tbPort = 8883;
 constexpr char tbAddr[] PROGMEM = "prita.undiknas.ac.id";
 constexpr char spiffsBinUrl[] PROGMEM = "http://prita.undiknas.ac.id/cdn/firmware/micum1.spiffs.bin";
