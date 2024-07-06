@@ -15,7 +15,7 @@
 #define WS_RATE_LIMIT_INTERVAL 1000UL
 #endif
 
-#define USE_IOT
+//#define USE_IOT
 #ifdef USE_IOT
 #define THINGSBOARD_ENABLE_STREAM_UTILS true
 #define USE_IOT_SECURE
