@@ -170,7 +170,7 @@ void _onWsEventMain(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsE
       saveConfig();
     }
     else if(cmd == "syncClientAttr"){
-      syncClientAttr(2);
+      udawa.syncClientAttr(2);
     }
     else if(cmd == "reboot"){
       udawa.reboot(3);
@@ -364,6 +364,7 @@ void loadConfig(){
     if(doc[PSTR("pumpPower")] != nullptr){config.pumpPower = doc[PSTR("pumpPower")].as<uint8_t>();}
     if(doc[PSTR("growLightState")] != nullptr){config.growLightState = doc[PSTR("growLightState")].as<bool>();}
     if(doc[PSTR("pumpState")] != nullptr){config.pumpState = doc[PSTR("pumpState")].as<bool>();}
+    if(doc[PSTR("label")] != nullptr){config.label = doc[PSTR("label")].as<String>();} else{config.label = "My MICU M1";}
   }
 }
 
@@ -378,6 +379,7 @@ void saveConfig(){
   doc[PSTR("pumpPower")] = config.pumpPower;
   doc[PSTR("growLightState")] = config.growLightState;
   doc[PSTR("pumpState")] = config.pumpState;
+  doc[PSTR("label")] = config.label;
   bool status = configHelper.save(doc);
   udawa.logger->debug(PSTR(__func__), PSTR("%d\n"), (int)status);
 }
@@ -404,6 +406,7 @@ void syncClientAttr(uint8_t direction){
     doc[PSTR("micuM1State")][PSTR("mode")] = config.mode;
     doc[PSTR("micuM1State")][PSTR("sowingDatetime")] = config.sowingDatetime;
     doc[PSTR("micuM1State")][PSTR("selectedProfile")] = config.selectedProfile;
+    doc[PSTR("micuM1State")][PSTR("label")] = config.label;
     //..
     serializeJson(doc, buffer);
     udawa.wsBroadcast(buffer);

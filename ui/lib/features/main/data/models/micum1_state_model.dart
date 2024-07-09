@@ -5,6 +5,7 @@ class MicuM1State {
   int mode;
   String sowingDatetime;
   int selectedProfile;
+  String label;
 
   MicuM1State({
     this.growLightState = false,
@@ -12,6 +13,7 @@ class MicuM1State {
     this.mode = 0,
     this.sowingDatetime = "",
     this.selectedProfile = 1,
+    this.label = "",
   });
 
   // Factory constructor to create from a JSON map
@@ -31,6 +33,8 @@ class MicuM1State {
         selectedProfile: data["selectedProfile"] is int
             ? data["selectedProfile"]
             : (data["selectedProfile"] as int),
+        label:
+            data["label"] is String ? data["label"] : (data["label"] as String),
       );
     } catch (error) {
       //print("MicuM1State error: ${error.toString()}");

@@ -58,6 +58,11 @@ class _M1ScreenState extends State<M1Screen> {
   @override
   void initState() {
     super.initState(); // Always call super.initState() first!
+
+    Map<String, dynamic> payload = {'cmd': 'syncClientAttr'};
+    context
+        .read<AuthBloc>()
+        .add(AuthLocalOnSendCommandReceived(payload: payload));
   }
 
   void _setSowingTS(String datetime) {
@@ -113,7 +118,7 @@ class _M1ScreenState extends State<M1Screen> {
         key: _scaffoldKey, // Assign the key
         appBar: AppBarWidget(
           scaffoldKey: _scaffoldKey,
-          title: cfg.hname,
+          title: micuM1State.label,
           uptime: " UT ${devTel.uptime.toString()}",
         ),
         drawer: Drawer(
