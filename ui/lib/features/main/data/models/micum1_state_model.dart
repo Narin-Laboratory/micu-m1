@@ -3,14 +3,14 @@ class MicuM1State {
   bool growLightState;
   bool pumpState;
   int mode;
-  String sowingTS;
+  String sowingDatetime;
   int selectedProfile;
 
   MicuM1State({
     this.growLightState = false,
     this.pumpState = false,
     this.mode = 0,
-    this.sowingTS = "",
+    this.sowingDatetime = "",
     this.selectedProfile = 1,
   });
 
@@ -25,15 +25,15 @@ class MicuM1State {
             ? data["pumpState"]
             : (data["pumpState"] as bool),
         mode: data["mode"] is int ? data["mode"] : (data["mode"] as int),
-        sowingTS: data["sowingTS"] is String
-            ? data["sowingTS"]
-            : (data["sowingTS"] as String),
+        sowingDatetime: data["sowingDatetime"] is String
+            ? data["sowingDatetime"]
+            : (data["sowingDatetime"] as String),
         selectedProfile: data["selectedProfile"] is int
             ? data["selectedProfile"]
             : (data["selectedProfile"] as int),
       );
     } catch (error) {
-      print("MicuM1State error: ${error.toString()}");
+      //print("MicuM1State error: ${error.toString()}");
       return MicuM1State(); // Return default on error
     }
   }

@@ -3,6 +3,7 @@
 #include "UdawaSerialLogger.h"
 #include "Udawa.h"
 #include "UdawaConfig.h"
+#include <time.h>
 
 struct Config {
     SemaphoreHandle_t xSemaphoreGrowControl = NULL;
@@ -36,14 +37,15 @@ struct Config {
 
     uint8_t pumpPWMCutOff = 180;
 
-    String sowingTS = "2024-07-09 08:00:00";
+    String sowingDatetime = "2024-07-09 08:00:00";
     uint8_t selectedProfile = 0;
     uint8_t mode = 0;
+    long remainingTimeToHarvest = 0;
 };
 
 struct Profile {
     uint8_t id;
-    String mame;
+    String name;
     unsigned long incubationTS;
 };
 Profile profiles[20];
@@ -52,7 +54,7 @@ GenericConfig configHelper("/micu.json");
 
 
 #ifdef USE_LOCAL_WEB_INTERFACE
-void _onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len);
+void _onWsEventMain(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len);
 #endif
 #ifdef USE_IOT
 void _processThingsboardSharedAttributesUpdate(const JsonObjectConst &data);

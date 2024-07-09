@@ -38,7 +38,7 @@ class _AppBarWidgetState extends State<AppBarWidget> {
       actions: [
         Text(
           widget.uptime,
-          style: TextStyle(fontSize: 8),
+          style: const TextStyle(fontSize: 8),
         ),
         IconButton(
           onPressed: () {

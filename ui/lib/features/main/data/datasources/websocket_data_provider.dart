@@ -71,7 +71,7 @@ class WebSocketService extends ChangeNotifier {
       if (data == "") {
         return;
       }
-      print(data);
+      //print(data);
       _channel!.sink.add(jsonEncode(data));
     }
   }

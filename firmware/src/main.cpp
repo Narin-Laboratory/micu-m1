@@ -5,7 +5,7 @@ Config config;
 
 void setup() {
   #ifdef USE_LOCAL_WEB_INTERFACE
-  udawa.addOnWsEvent(_onWsEvent);
+  udawa.addOnWsEvent(_onWsEventMain);
   #endif
   #ifdef USE_IOT
   udawa.addOnThingsboardSharedAttributesReceived(_processThingsboardSharedAttributesUpdate);
@@ -107,7 +107,7 @@ void loop() {
 }
 
 #ifdef USE_LOCAL_WEB_INTERFACE
-void _onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
+void _onWsEventMain(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEventType type, void * arg, uint8_t *data, size_t len) {
   if (type == WS_EVT_CONNECT) {
     // Handle WebSocket connection event
   } else if (type == WS_EVT_DATA) {
@@ -133,12 +133,11 @@ void _onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEvent
         udawa.logger->debug(PSTR(__func__), PSTR("power: %d\n"), doc["power"].as<uint8_t>());
       }
     }
-    else if(cmd == "setSowingTS"){
+    else if(cmd == "setSowingDatetime"){
       serializeJsonPretty(doc, Serial);
-      if(doc["ts"] != nullptr){
-        config.sowingTS = doc["ts"].as<String>();
-        
-        udawa.logger->debug(PSTR(__func__), PSTR("SowingTS: %s\n"), config.sowingTS.c_str());
+      if(doc["datetime"] != nullptr){
+        config.sowingDatetime = doc["datetime"].as<String>();
+        udawa.logger->debug(PSTR(__func__), PSTR("sowingDatetime: %s\n"), config.sowingDatetime.c_str());
         saveConfig();
         syncClientAttr(2);
       }
@@ -271,8 +270,75 @@ void _pvTaskCodeGrowControl(void*){
     }
     // Auto mode
     else if(config.mode == 1){
+    // Get current time from the ESP32Time object
+    time_t currentTime = udawa.RTC.getEpoch(); // Get time in seconds
+
+    // Parse the sowing datetime string into a tm struct
+    struct tm timeinfo;
+    if (strptime(config.sowingDatetime.c_str(), "%Y-%m-%d %H:%M:%S", &timeinfo) != NULL) {
+
+      // Convert the tm struct to seconds since epoch
+      time_t sowingTime = mktime(&timeinfo);
+
+      // Calculate remaining time until harvest
+      if (config.selectedProfile >= 1 && config.selectedProfile <= 20) {
+        config.remainingTimeToHarvest = profiles[config.selectedProfile - 1].incubationTS / 1000 - (currentTime - sowingTime);
+      } else {
+        // Handle invalid selectedProfile value
+      }
       
+
+      // Update "Siap panen dalam" based on the remaining time
+      // ... your code to update the UI with the remaining time ...
+      
+      // Example:
+      if (config.remainingTimeToHarvest > 0) {
+        // Still growing
+        // You can display the remaining time in days, hours, minutes, etc.
+        JsonDocument doc;
+        char buffer[512];
+        doc[PSTR("micuM1Stream")][PSTR("remainingTimeToHarvest")] = config.remainingTimeToHarvest;
+        serializeJson(doc, buffer);
+        udawa.wsBroadcast(buffer);
+
+      } else {
+        // Ready to harvest
+        setColor(0, 255, 0); // Turn LED green for harvest
+      }
+
+      // Get the current hour
+      struct tm current_tm;
+      localtime_r(&currentTime, &current_tm);
+      int currentHour = current_tm.tm_hour;
+
+      // Check if it's daytime (6 AM - 6 PM)
+      if (currentHour >= 6 && currentHour < 18) {
+          // Turn on the grow light
+          if (!config.growLightState) {
+              config.growLightBrightness = 100;
+              udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.growLightBrightnessPrev, config.growLightBrightness);
+          }
+      } else {
+          // Turn off the grow light
+          if (config.growLightState) {
+              config.growLightBrightness = 0;
+          }
+      }
+
+      unsigned long currentMillis = millis();
+      // Water the plants every 6 hours (6 AM, 12 PM, 6 PM) for 5 seconds
+      if (currentHour % 6 == 0 && (currentMillis - config.pumpLastOn) > 60000) { // Only water every 60 seconds if the hour is right
+        config.pumpPower = 100;
+        //udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
+      } else if (currentMillis - config.pumpLastOn > 5000 && config.pumpState){ // Turn off the pump after 5 seconds if it was turned on
+        config.pumpPower = 0;
+        //udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
+      }
+    } else {
+      // Handle error: invalid sowing datetime
+      udawa.logger->error(PSTR(__func__), PSTR("Error parsing datetime string: %s\n"), config.sowingDatetime.c_str());
     }
+  }
 
     //Pump failsafe
     if(millis() - config.pumpLastOn > 10000){
@@ -280,7 +346,7 @@ void _pvTaskCodeGrowControl(void*){
     }
 
 
-    vTaskDelay((const TickType_t) 1 / portTICK_PERIOD_MS);
+    vTaskDelay((const TickType_t) 1000 / portTICK_PERIOD_MS);
   }
 }
 
@@ -289,7 +355,7 @@ void loadConfig(){
   bool status = configHelper.load(doc);
   udawa.logger->debug(PSTR(__func__), PSTR("%d\n"), (int)status);
   if(status){
-    if(doc[PSTR("sowingTS")] != nullptr){config.sowingTS = doc[PSTR("sowingTS")].as<unsigned long>();} else{config.sowingTS = udawa.RTC.getEpoch() * 1000;}
+    if(doc[PSTR("sowingDatetime")] != nullptr){config.sowingDatetime = doc[PSTR("sowingDatetime")].as<String>();} else{config.sowingDatetime = "2024-07-09 08:00:00";}
     if(doc[PSTR("selectedProfile")] != nullptr){config.selectedProfile = doc[PSTR("selectedProfile")].as<uint8_t>();} else{config.selectedProfile = 1;}
     if(doc[PSTR("mode")] != nullptr){config.mode = doc[PSTR("mode")].as<uint8_t>();} else{config.mode = 0;}
     if(doc[PSTR("growLightBrightnessPrev")] != nullptr){config.growLightBrightnessPrev = doc[PSTR("growLightBrightnessPrev")].as<uint8_t>();}
@@ -303,7 +369,7 @@ void loadConfig(){
 
 void saveConfig(){
   JsonDocument doc;
-  doc[PSTR("sowingTS")] = config.sowingTS;
+  doc[PSTR("sowingDatetime")] = config.sowingDatetime;
   doc[PSTR("selectedProfile")] = config.selectedProfile;
   doc[PSTR("mode")] = config.mode;
   doc[PSTR("growLightBrightnessPrev")] = config.growLightBrightnessPrev;
@@ -326,7 +392,7 @@ void syncClientAttr(uint8_t direction){
   if(tb.connected() && (direction == 0 || direction == 1) ){
     /..
     serializeJson(doc, buffer);
-    iotSendAttributes(buffer);
+    udawa.iotSendAttributes(buffer);
     doc.clear();
   }
   #endif
@@ -336,7 +402,7 @@ void syncClientAttr(uint8_t direction){
     doc[PSTR("micuM1State")][PSTR("growLightState")] = config.growLightState;
     doc[PSTR("micuM1State")][PSTR("pumpState")] = config.pumpState;
     doc[PSTR("micuM1State")][PSTR("mode")] = config.mode;
-    doc[PSTR("micuM1State")][PSTR("sowingTS")] = config.sowingTS;
+    doc[PSTR("micuM1State")][PSTR("sowingDatetime")] = config.sowingDatetime;
     doc[PSTR("micuM1State")][PSTR("selectedProfile")] = config.selectedProfile;
     //..
     serializeJson(doc, buffer);

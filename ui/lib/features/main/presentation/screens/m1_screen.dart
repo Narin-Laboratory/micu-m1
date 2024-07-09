@@ -1,11 +1,10 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:micu/features/main/data/models/device_attributes_model.dart';
 import 'package:micu/features/main/data/models/device_config_model.dart';
 import 'package:micu/features/main/data/models/device_telemetry_model.dart';
 import 'package:micu/features/main/data/models/micum1_state_model.dart';
+import 'package:micu/features/main/data/models/micum1_stream_model.dart';
 import 'package:micu/features/main/presentation/bloc/auth_bloc.dart';
 import 'package:micu/features/main/presentation/bloc/websocket_bloc.dart';
 import 'package:micu/features/main/presentation/screens/home_screen.dart';
@@ -25,6 +24,7 @@ class _M1ScreenState extends State<M1Screen> {
   DeviceAttributes attr = DeviceAttributes();
   DeviceConfig cfg = DeviceConfig();
   MicuM1State micuM1State = MicuM1State();
+  MicuM1Stream micuM1Stream = MicuM1Stream();
   // Plant Profiles (You should probably load this from a database or file)
   final Map<int, List<dynamic>> profiles = {
     1: [1, "Arugula", 1209600000],
@@ -49,17 +49,21 @@ class _M1ScreenState extends State<M1Screen> {
     20: [20, "Watercress", 691200000],
   };
 
-  DateTime _sowingTime = DateTime.now(); // Default to current time
+  DateTime _sowingDatetime = DateTime.now(); // Default to current time
+  int _dayToHarvest = 0;
+  int _hourToHarvest = 0;
+  int _minuteToHarvest = 0;
+  int _secondToHarvest = 0;
 
   @override
   void initState() {
     super.initState(); // Always call super.initState() first!
   }
 
-  void _setSowingTS(String ts) {
+  void _setSowingTS(String datetime) {
     Map<String, dynamic> payload = {
-      'cmd': 'setSowingTS',
-      'ts': ts,
+      'cmd': 'setSowingDatetime',
+      'datetime': datetime,
     };
     context
         .read<AuthBloc>()
@@ -85,8 +89,18 @@ class _M1ScreenState extends State<M1Screen> {
         } else if (state is WebSocketMessageReadyMicuM1State) {
           setState(() {
             micuM1State = state.micuM1State;
+            _sowingDatetime = DateTime.parse(micuM1State.sowingDatetime);
           });
-          _sowingTime = DateTime.parse(micuM1State.sowingTS);
+        } else if (state is WebSocketMessageReadyMicuM1Stream) {
+          setState(() {
+            micuM1Stream = state.micuM1Stream;
+            Duration duration =
+                Duration(seconds: state.micuM1Stream.remainingTimeToHarvest);
+            _dayToHarvest = duration.inDays;
+            _hourToHarvest = duration.inHours;
+            _minuteToHarvest = duration.inMinutes;
+            _secondToHarvest = duration.inSeconds;
+          });
         } else if (state is WebSocketDisconnect) {
           Navigator.pushAndRemoveUntil(
             context,
@@ -183,25 +197,25 @@ class _M1ScreenState extends State<M1Screen> {
                         onPressed: () async {
                           final DateTime? picked = await showDatePicker(
                             context: context,
-                            initialDate: _sowingTime,
+                            initialDate: _sowingDatetime,
                             firstDate: DateTime(2000),
                             lastDate: DateTime(2101),
                           );
-                          if (picked != null && picked != _sowingTime) {
+                          if (picked != null && picked != _sowingDatetime) {
                             final TimeOfDay? pickedTime = await showTimePicker(
                               context: context,
-                              initialTime: TimeOfDay.fromDateTime(_sowingTime),
+                              initialTime:
+                                  TimeOfDay.fromDateTime(_sowingDatetime),
                             );
                             if (pickedTime != null) {
                               setState(() {
-                                _sowingTime = DateTime(
+                                _sowingDatetime = DateTime(
                                   picked.year,
                                   picked.month,
                                   picked.day,
                                   pickedTime.hour,
                                   pickedTime.minute,
                                 );
-                                // TODO: Handle selected sowing time (e.g., update device)
                                 String formattedDateTime =
                                     "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')} ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}:00";
                                 _setSowingTS(formattedDateTime);
@@ -209,7 +223,7 @@ class _M1ScreenState extends State<M1Screen> {
                             }
                           }
                         },
-                        child: Text(_sowingTime.toString()),
+                        child: Text(_sowingDatetime.toString()),
                       ),
                     ]),
                 const SizedBox(height: 100),
@@ -248,7 +262,7 @@ class _M1ScreenState extends State<M1Screen> {
                         MainAxisSize.min, // Added to allow row to shrink
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(
+                      const Icon(
                         Icons.content_cut_outlined,
                         color: Colors.blueGrey,
                         size: 120,
@@ -260,14 +274,20 @@ class _M1ScreenState extends State<M1Screen> {
                             MainAxisSize.min, // Added to allow column to shrink
                         crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
-                          Text(
+                          const Text(
                             'Siap panen dalam',
                             style: TextStyle(
                                 color: Colors.greenAccent, fontSize: 18),
                           ),
                           Text(
-                            '10 HARI',
-                            style: TextStyle(color: Colors.grey, fontSize: 48),
+                            '$_dayToHarvest HARI',
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 48),
+                          ),
+                          Text(
+                            '$_hourToHarvest Jam, $_minuteToHarvest Menit, $_secondToHarvest Detik',
+                            style: const TextStyle(
+                                color: Colors.grey, fontSize: 8),
                           ),
                         ],
                       ),
@@ -358,7 +378,7 @@ class _M1ScreenState extends State<M1Screen> {
                     const SizedBox(
                         width: 8), // Add spacing between Icon and Text
                     Text(
-                      'Terhubung ke ' + cfg.ap,
+                      'Terhubung ke ${cfg.ap}',
                     ),
                   ],
                 ),

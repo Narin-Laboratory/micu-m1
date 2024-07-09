@@ -16,12 +16,18 @@ class DeviceTelemetry {
 
   // Factory constructor to create from a JSON map
   factory DeviceTelemetry.fromJson(Map<String, dynamic> data) {
-    return DeviceTelemetry(
-      heap: data["heap"],
-      rssi: data["rssi"],
-      uptime: data["uptime"],
-      dt: data["dt"],
-      dts: data["dts"],
-    );
+    try {
+      return DeviceTelemetry(
+        heap: data["heap"] is int ? data["heap"] : (data["heap"] as int),
+        rssi: data["rssi"] is int ? data["rssi"] : (data["rssi"] as int),
+        uptime:
+            data["uptime"] is int ? data["uptime"] : (data["uptime"] as int),
+        dt: data["dt"] is int ? data["dt"] : (data["dt"] as int),
+        dts: data["dts"] is String ? data["dts"] : (data["dts"] as String),
+      );
+    } catch (error) {
+      //print("DeviceTelemetry error: ${error.toString()}");
+      return DeviceTelemetry(); // Return default on error
+    }
   }
 }

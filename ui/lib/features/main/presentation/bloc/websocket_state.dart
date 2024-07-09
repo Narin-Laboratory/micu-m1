@@ -53,4 +53,10 @@ final class WebSocketMessageReadyMicuM1State extends WebSocketState {
   WebSocketMessageReadyMicuM1State({required this.micuM1State});
 }
 
+final class WebSocketMessageReadyMicuM1Stream extends WebSocketState {
+  final MicuM1Stream micuM1Stream;
+
+  WebSocketMessageReadyMicuM1Stream({required this.micuM1Stream});
+}
+
 final class WebSocketDisconnect extends WebSocketState {}
