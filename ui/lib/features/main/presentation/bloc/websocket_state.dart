@@ -47,4 +47,10 @@ final class WebSocketMessageReadyDeviceConfig extends WebSocketState {
   WebSocketMessageReadyDeviceConfig({required this.config});
 }
 
+final class WebSocketMessageReadyMicuM1State extends WebSocketState {
+  final MicuM1State micuM1State;
+
+  WebSocketMessageReadyMicuM1State({required this.micuM1State});
+}
+
 final class WebSocketDisconnect extends WebSocketState {}

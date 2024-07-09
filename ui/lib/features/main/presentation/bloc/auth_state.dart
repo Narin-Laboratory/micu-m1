@@ -53,4 +53,10 @@ final class AuthLocalError extends AuthState {
   });
 }
 
+final class AuthLocalSendCommand extends AuthState {
+  final dynamic payload;
+
+  AuthLocalSendCommand({required this.payload});
+}
+
 final class AuthLocalSignOut extends AuthState {}

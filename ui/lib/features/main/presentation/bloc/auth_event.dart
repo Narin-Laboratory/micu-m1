@@ -29,4 +29,12 @@ final class AuthLocalOnWebSocketLocalAuthReceived extends AuthEvent {
   });
 }
 
+final class AuthLocalOnSendCommandReceived extends AuthEvent {
+  final dynamic payload;
+
+  AuthLocalOnSendCommandReceived({
+    required this.payload,
+  });
+}
+
 final class AuthLocalOnSignOut extends AuthEvent {}

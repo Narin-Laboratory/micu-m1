@@ -28,8 +28,6 @@ class DeviceConfig {
       group: data["group"],
       ap: data["ap"],
       gmtOff: data["gmtOff"],
-      fP: data["fP"],
-      fIoT: data["fIoT"],
       hname: data["hname"],
     );
   }

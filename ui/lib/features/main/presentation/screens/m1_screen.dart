@@ -1,8 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:micu/features/main/data/models/device_attributes_model.dart';
 import 'package:micu/features/main/data/models/device_config_model.dart';
 import 'package:micu/features/main/data/models/device_telemetry_model.dart';
+import 'package:micu/features/main/data/models/micum1_state_model.dart';
+import 'package:micu/features/main/presentation/bloc/auth_bloc.dart';
 import 'package:micu/features/main/presentation/bloc/websocket_bloc.dart';
 import 'package:micu/features/main/presentation/screens/home_screen.dart';
 import 'package:micu/features/main/presentation/widgets/appbar_widget.dart';
@@ -20,6 +24,47 @@ class _M1ScreenState extends State<M1Screen> {
   DeviceTelemetry devTel = DeviceTelemetry();
   DeviceAttributes attr = DeviceAttributes();
   DeviceConfig cfg = DeviceConfig();
+  MicuM1State micuM1State = MicuM1State();
+  // Plant Profiles (You should probably load this from a database or file)
+  final Map<int, List<dynamic>> profiles = {
+    1: [1, "Arugula", 1209600000],
+    2: [2, "Broccoli", 864000000],
+    3: [3, "Cabbage", 864000000],
+    4: [4, "Cilantro", 1209600000],
+    5: [5, "Kale", 1036800000],
+    6: [6, "Kohlrabi", 604800000],
+    7: [7, "Mustard", 691200000],
+    8: [8, "Pea Shoots", 1209600000],
+    9: [9, "Radish", 604800000],
+    10: [10, "Sunflower", 864000000],
+    11: [11, "Amaranth", 691200000],
+    12: [12, "Beet", 1555200000],
+    13: [13, "Buckwheat", 604800000],
+    14: [14, "Chard", 1036800000],
+    15: [15, "Chia", 691200000],
+    16: [16, "Fenugreek", 691200000],
+    17: [17, "Lettuce", 864000000],
+    18: [18, "Mizuna", 864000000],
+    19: [19, "Pak Choi", 864000000],
+    20: [20, "Watercress", 691200000],
+  };
+
+  DateTime _sowingTime = DateTime.now(); // Default to current time
+
+  @override
+  void initState() {
+    super.initState(); // Always call super.initState() first!
+  }
+
+  void _setSowingTS(String ts) {
+    Map<String, dynamic> payload = {
+      'cmd': 'setSowingTS',
+      'ts': ts,
+    };
+    context
+        .read<AuthBloc>()
+        .add(AuthLocalOnSendCommandReceived(payload: payload));
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -37,6 +82,11 @@ class _M1ScreenState extends State<M1Screen> {
           setState(() {
             cfg = state.config;
           });
+        } else if (state is WebSocketMessageReadyMicuM1State) {
+          setState(() {
+            micuM1State = state.micuM1State;
+          });
+          _sowingTime = DateTime.parse(micuM1State.sowingTS);
         } else if (state is WebSocketDisconnect) {
           Navigator.pushAndRemoveUntil(
             context,
@@ -79,12 +129,241 @@ class _M1ScreenState extends State<M1Screen> {
             ],
           ),
         ),
-        body: SingleChildScrollView(
-          // To handle potential overflow
-          padding: const EdgeInsets.all(6.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [],
+        body: Center(
+          // Wrap with Center widget
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisSize:
+                  MainAxisSize.min, // Added to allow content to shrink
+              crossAxisAlignment: CrossAxisAlignment.center, // Center the text
+              children: [
+                Row(
+                    mainAxisSize:
+                        MainAxisSize.min, // Added to allow row to shrink
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Plant Type Dropdown
+                      const Text("Jenis Microgreens:"),
+                      const SizedBox(width: 8),
+                      DropdownButtonHideUnderline(
+                        child: DropdownButton<int>(
+                          value: micuM1State.selectedProfile,
+                          onChanged: (newValue) {
+                            setState(() {
+                              micuM1State.selectedProfile = newValue!.toInt();
+                            });
+                            Map<String, dynamic> payload = {
+                              'cmd': 'setProfile',
+                              'id': newValue!.toInt(),
+                            };
+                            context.read<AuthBloc>().add(
+                                AuthLocalOnSendCommandReceived(
+                                    payload: payload));
+                          },
+                          items: profiles.entries
+                              .map((entry) => DropdownMenuItem<int>(
+                                    value: entry.value[0] as int,
+                                    child: Text(entry.value[1] as String),
+                                  ))
+                              .toList(),
+                        ),
+                      ),
+                    ]),
+                Row(
+                    mainAxisSize:
+                        MainAxisSize.min, // Added to allow row to shrink
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      // Sowing Time Date & Time Picker
+                      const SizedBox(width: 16),
+                      const Text("Waktu Semai:"),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () async {
+                          final DateTime? picked = await showDatePicker(
+                            context: context,
+                            initialDate: _sowingTime,
+                            firstDate: DateTime(2000),
+                            lastDate: DateTime(2101),
+                          );
+                          if (picked != null && picked != _sowingTime) {
+                            final TimeOfDay? pickedTime = await showTimePicker(
+                              context: context,
+                              initialTime: TimeOfDay.fromDateTime(_sowingTime),
+                            );
+                            if (pickedTime != null) {
+                              setState(() {
+                                _sowingTime = DateTime(
+                                  picked.year,
+                                  picked.month,
+                                  picked.day,
+                                  pickedTime.hour,
+                                  pickedTime.minute,
+                                );
+                                // TODO: Handle selected sowing time (e.g., update device)
+                                String formattedDateTime =
+                                    "${picked.year}-${picked.month.toString().padLeft(2, '0')}-${picked.day.toString().padLeft(2, '0')} ${pickedTime.hour.toString().padLeft(2, '0')}:${pickedTime.minute.toString().padLeft(2, '0')}:00";
+                                _setSowingTS(formattedDateTime);
+                              });
+                            }
+                          }
+                        },
+                        child: Text(_sowingTime.toString()),
+                      ),
+                    ]),
+                const SizedBox(height: 100),
+                Row(
+                    mainAxisSize:
+                        MainAxisSize.min, // Added to allow row to shrink
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Text("Mode Operasi:"),
+                      const SizedBox(width: 8),
+                      Switch(
+                        value: micuM1State.mode == 1 ? true : false,
+                        onChanged: (newValue) {
+                          setState(() {
+                            micuM1State.mode = newValue == true ? 1 : 0;
+                          });
+                          Map<String, dynamic> payload = {
+                            'cmd': 'setMode',
+                            'mode': newValue == false ? 0 : 1,
+                          };
+                          context.read<AuthBloc>().add(
+                              AuthLocalOnSendCommandReceived(payload: payload));
+                        },
+                        activeTrackColor: Colors.lightGreenAccent,
+                        activeColor: Colors.green,
+                        inactiveTrackColor: Colors.grey,
+                        inactiveThumbColor: Colors.blueGrey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(micuM1State.mode == 1 ? 'Auto' : 'Manual'),
+                    ]), // Add a select box of operation mode (Manual & Auto) here
+                const SizedBox(height: 20),
+                if (micuM1State.mode == 1)
+                  Row(
+                    mainAxisSize:
+                        MainAxisSize.min, // Added to allow row to shrink
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(
+                        Icons.content_cut_outlined,
+                        color: Colors.blueGrey,
+                        size: 120,
+                      ),
+                      const SizedBox(
+                          width: 16), // Add spacing between Icon and Text
+                      Column(
+                        mainAxisSize:
+                            MainAxisSize.min, // Added to allow column to shrink
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Siap panen dalam',
+                            style: TextStyle(
+                                color: Colors.greenAccent, fontSize: 18),
+                          ),
+                          Text(
+                            '10 HARI',
+                            style: TextStyle(color: Colors.grey, fontSize: 48),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                if (micuM1State.mode == 0)
+                  Row(
+                      mainAxisSize:
+                          MainAxisSize.max, // Added to allow row to shrink
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        Column(
+                          mainAxisSize: MainAxisSize
+                              .min, // Added to allow column to shrink
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Text("Lampu Penumbuh:"),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: micuM1State.growLightState,
+                              onChanged: (newValue) {
+                                setState(() {
+                                  micuM1State.growLightState = newValue;
+                                });
+                                Map<String, dynamic> payload = {
+                                  'cmd': 'setGrowLight',
+                                  'brightness': newValue == false ? 0 : 100,
+                                };
+                                context.read<AuthBloc>().add(
+                                    AuthLocalOnSendCommandReceived(
+                                        payload: payload));
+                              },
+                              activeTrackColor: Colors.lightGreenAccent,
+                              activeColor: Colors.green,
+                              inactiveTrackColor: Colors.grey,
+                              inactiveThumbColor: Colors.blueGrey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(micuM1State.growLightState == true
+                                ? 'Nyala'
+                                : 'Padam'),
+                          ],
+                        ),
+                        Column(
+                          mainAxisSize: MainAxisSize
+                              .min, // Added to allow column to shrink
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Text("Pompa Penyiram:"),
+                            const SizedBox(width: 8),
+                            Switch(
+                              value: micuM1State.pumpState,
+                              onChanged: (newValue) {
+                                setState(() {
+                                  micuM1State.pumpState = newValue;
+                                });
+                                Map<String, dynamic> payload = {
+                                  'cmd': 'setPump',
+                                  'power': newValue == false ? 0 : 100,
+                                };
+                                context.read<AuthBloc>().add(
+                                    AuthLocalOnSendCommandReceived(
+                                        payload: payload));
+                              },
+                              activeTrackColor: Colors.lightGreenAccent,
+                              activeColor: Colors.green,
+                              inactiveTrackColor: Colors.grey,
+                              inactiveThumbColor: Colors.blueGrey,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(micuM1State.pumpState == true
+                                ? 'Nyala'
+                                : 'Padam'),
+                          ],
+                        ),
+                      ]),
+                const SizedBox(height: 100),
+                Row(
+                  mainAxisSize:
+                      MainAxisSize.min, // Added to allow row to shrink
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(
+                      Icons.signal_wifi_statusbar_4_bar,
+                      color: Colors.blueAccent,
+                      size: 24,
+                    ),
+                    const SizedBox(
+                        width: 8), // Add spacing between Icon and Text
+                    Text(
+                      'Terhubung ke ' + cfg.ap,
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),

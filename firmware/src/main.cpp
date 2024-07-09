@@ -10,6 +10,7 @@ void setup() {
   #ifdef USE_IOT
   udawa.addOnThingsboardSharedAttributesReceived(_processThingsboardSharedAttributesUpdate);
   #endif
+  udawa.addOnSyncClientAttributesCallback(syncClientAttr);
   udawa.begin();
   
   if (!udawa.crashState.fSafeMode) {
@@ -79,6 +80,27 @@ void loop() {
   if (!udawa.crashState.fSafeMode) {
     if (millis() - timer > 1000) {
       udawa.logger->debug(PSTR(__func__), PSTR("%d\n"), ESP.getFreeHeap());
+
+      if(udawa.ws.count() > 0){
+         char buffer[128];
+        JsonDocument doc;
+        doc[PSTR("devTel")][PSTR("heap")] = heap_caps_get_free_size(MALLOC_CAP_8BIT);
+        doc[PSTR("devTel")][PSTR("rssi")] = WiFi.RSSI();
+        doc[PSTR("devTel")][PSTR("uptime")] = millis()/1000;
+        doc[PSTR("devTel")][PSTR("dt")] = udawa.RTC.getEpoch();
+        doc[PSTR("devTel")][PSTR("dts")] = udawa.RTC.getDateTime();
+        serializeJson(doc, buffer);
+        udawa.wsBroadcast(buffer);
+        doc.clear();
+      }
+
+      if(config.mode == 0){
+        setColor(5, 0, 0);
+      }
+      else if(config.mode == 1){
+        setColor(0, 0, 5);
+      }
+
       timer = millis();
     }
   }
@@ -112,34 +134,44 @@ void _onWsEvent(AsyncWebSocket * server, AsyncWebSocketClient * client, AwsEvent
       }
     }
     else if(cmd == "setSowingTS"){
+      serializeJsonPretty(doc, Serial);
       if(doc["ts"] != nullptr){
-        config.sowingTS = doc["ts"].as<unsigned long>();
-        udawa.logger->debug(PSTR(__func__), PSTR("SowingTS: %d\n"), doc["ts"].as<unsigned long>());
+        config.sowingTS = doc["ts"].as<String>();
+        
+        udawa.logger->debug(PSTR(__func__), PSTR("SowingTS: %s\n"), config.sowingTS.c_str());
+        saveConfig();
+        syncClientAttr(2);
       }
     }
     else if(cmd == "setProfile"){
       if(doc["id"] != nullptr){
         config.selectedProfile = doc["id"].as<uint8_t>();
         udawa.logger->debug(PSTR(__func__), PSTR("selected profile: %d\n"), doc["id"].as<uint8_t>());
+        saveConfig();
+        syncClientAttr(2);
       }
     }
     else if(cmd == "setMode"){
       if(doc["mode"] != nullptr){
         config.mode = doc["mode"].as<uint8_t>();
         udawa.logger->debug(PSTR(__func__), PSTR("Operation mode: %d\n"), doc["mode"].as<uint8_t>());
+        saveConfig();
+        syncClientAttr(2);
       }
     }
     else if(cmd == "setDateTime"){
       if(doc["ts"] != nullptr){
-        config.selectedProfile = doc["ts"].as<uint8_t>();
-        udawa.logger->debug(PSTR(__func__), PSTR("setDateTime: %d\n"), doc["ts"].as<unsigned long>());
+        udawa.rtcUpdate(doc["ts"].as<unsigned long>());
+        udawa.logger->debug(PSTR(__func__), PSTR("setDateTime: %lu\n"), doc["ts"].as<unsigned long>());
+        saveConfig();
+        syncClientAttr(2);
       }
     }
     else if(cmd == "saveConfig"){
       saveConfig();
     }
-    else if(cmd == "syncConfig"){
-      //syncConfig();
+    else if(cmd == "syncClientAttr"){
+      syncClientAttr(2);
     }
     else if(cmd == "reboot"){
       udawa.reboot(3);
@@ -162,12 +194,12 @@ void setColor(uint8_t r, uint8_t g, uint8_t b){
     ledcWrite(config.ledRChannel, r);
     ledcWrite(config.ledGChannel, g);
     ledcWrite(config.ledBChannel, b);
-    udawa.logger->debug(PSTR(__func__), PSTR("R: %d, G: %d, B: %d\n"), r, g, b);
+    //udawa.logger->debug(PSTR(__func__), PSTR("R: %d, G: %d, B: %d\n"), r, g, b);
   }else{
     ledcWrite(config.ledRChannel, 255 - r);
     ledcWrite(config.ledGChannel, 255 - g);
     ledcWrite(config.ledBChannel, 255 - b);
-    udawa.logger->debug(PSTR(__func__), PSTR("R: %d, G: %d, B: %d\n"), 255-r, 255-g, 255-b);
+    //udawa.logger->debug(PSTR(__func__), PSTR("R: %d, G: %d, B: %d\n"), 255-r, 255-g, 255-b);
   }
 }
 
@@ -188,7 +220,9 @@ void updateGrowLight(){
     }
   }
   config.growLightBrightnessPrev = config.growLightBrightness;
+  config.growLightState = config.growLightBrightness > 0 ? true : false;
   saveConfig();
+  syncClientAttr(2);
   udawa.logger->debug(PSTR(__func__), PSTR("%d\n"), config.growLightBrightness);
 }
 
@@ -209,7 +243,9 @@ void updatePump(){
     }
   }
   config.pumpPowerPrev = config.pumpPower;
+  config.pumpState = config.pumpPower > 0 ? true : false;
   saveConfig();
+  syncClientAttr(2);
   udawa.logger->debug(PSTR(__func__), PSTR("%d\n"), config.pumpPower);
 }
 
@@ -222,6 +258,11 @@ void _pvTaskCodeGrowControl(void*){
     if(config.pumpPower != config.pumpPowerPrev){
       udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
       updatePump();
+      if(!config.pumpState){
+        config.pumpLastOn = 0;
+      }else{
+        config.pumpLastOn = millis();
+      }
     }
 
     // Manual mode
@@ -230,12 +271,12 @@ void _pvTaskCodeGrowControl(void*){
     }
     // Auto mode
     else if(config.mode == 1){
-      unsigned long currentTS = udawa.RTC.getEpoch() * 1000;
-      if(currentTS - config.sowingTS <= profiles[config.selectedProfile - 1].incubationTS){
+      
+    }
 
-      }else{
-        
-      }
+    //Pump failsafe
+    if(millis() - config.pumpLastOn > 10000){
+      config.pumpPower = 0;
     }
 
 
@@ -255,6 +296,8 @@ void loadConfig(){
     if(doc[PSTR("growLightBrightness")] != nullptr){config.growLightBrightness = doc[PSTR("growLightBrightness")].as<uint8_t>();}
     if(doc[PSTR("pumpPowerPrev")] != nullptr){config.pumpPowerPrev = doc[PSTR("pumpPowerPrev")].as<uint8_t>();}
     if(doc[PSTR("pumpPower")] != nullptr){config.pumpPower = doc[PSTR("pumpPower")].as<uint8_t>();}
+    if(doc[PSTR("growLightState")] != nullptr){config.growLightState = doc[PSTR("growLightState")].as<bool>();}
+    if(doc[PSTR("pumpState")] != nullptr){config.pumpState = doc[PSTR("pumpState")].as<bool>();}
   }
 }
 
@@ -267,6 +310,37 @@ void saveConfig(){
   doc[PSTR("growLightBrightness")] = config.growLightBrightness;
   doc[PSTR("pumpPowerPrev")] = config.pumpPowerPrev;
   doc[PSTR("pumpPower")] = config.pumpPower;
+  doc[PSTR("growLightState")] = config.growLightState;
+  doc[PSTR("pumpState")] = config.pumpState;
   bool status = configHelper.save(doc);
   udawa.logger->debug(PSTR(__func__), PSTR("%d\n"), (int)status);
+}
+
+void syncClientAttr(uint8_t direction){
+  String ip = WiFi.localIP().toString();
+  
+  JsonDocument doc;
+  char buffer[512];
+
+  #ifdef USE_IOT
+  if(tb.connected() && (direction == 0 || direction == 1) ){
+    /..
+    serializeJson(doc, buffer);
+    iotSendAttributes(buffer);
+    doc.clear();
+  }
+  #endif
+
+  #ifdef USE_LOCAL_WEB_INTERFACE
+  if((direction == 0 || direction == 2)){
+    doc[PSTR("micuM1State")][PSTR("growLightState")] = config.growLightState;
+    doc[PSTR("micuM1State")][PSTR("pumpState")] = config.pumpState;
+    doc[PSTR("micuM1State")][PSTR("mode")] = config.mode;
+    doc[PSTR("micuM1State")][PSTR("sowingTS")] = config.sowingTS;
+    doc[PSTR("micuM1State")][PSTR("selectedProfile")] = config.selectedProfile;
+    //..
+    serializeJson(doc, buffer);
+    udawa.wsBroadcast(buffer);
+  }
+  #endif
 }

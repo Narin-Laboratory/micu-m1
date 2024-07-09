@@ -30,10 +30,13 @@ struct Config {
     uint8_t growLightBrightness = 0;
     uint8_t pumpPowerPrev = 0;
     uint8_t pumpPower = 0;
+    bool growLightState = false;
+    bool pumpState = false;
+    unsigned long pumpLastOn = 0;
 
     uint8_t pumpPWMCutOff = 180;
 
-    unsigned long sowingTS = 0;
+    String sowingTS = "2024-07-09 08:00:00";
     uint8_t selectedProfile = 0;
     uint8_t mode = 0;
 };
@@ -61,3 +64,4 @@ void updatePump();
 void _pvTaskCodeGrowControl(void*);
 void loadConfig();
 void saveConfig();
+void syncClientAttr(uint8_t direction);

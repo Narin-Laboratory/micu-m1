@@ -22,6 +22,14 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         _onAuthLocalWebSocketLocalAuthReceived);
     on<AuthLocalOnError>(_onAuthLocalOnError);
     on<AuthLocalOnSignOut>(_onAuthLocalSignOut);
+    on<AuthLocalOnSendCommandReceived>(_onAuthLocalSendCommand);
+  }
+
+  void _onAuthLocalSendCommand(
+      AuthLocalOnSendCommandReceived event, Emitter<AuthState> emit) {
+    final webSocketService = _context!.read<WebSocketService>();
+    webSocketService.send(event.payload);
+    emit(AuthLocalSendCommand(payload: event.payload));
   }
 
   void _onAuthLocalSignOut(AuthLocalOnSignOut event, Emitter<AuthState> emit) {

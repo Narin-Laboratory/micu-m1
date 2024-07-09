@@ -6,6 +6,7 @@ import 'package:meta/meta.dart';
 import 'package:micu/features/main/data/models/device_config_model.dart';
 import 'package:micu/features/main/data/models/device_telemetry_model.dart';
 import 'package:micu/features/main/data/models/device_attributes_model.dart';
+import 'package:micu/features/main/data/models/micum1_state_model.dart';
 
 part 'websocket_event.dart';
 part 'websocket_state.dart';
@@ -30,7 +31,10 @@ class WebSocketBloc extends Bloc<WebSocketEvent, WebSocketState> {
   void _onWebSocketOnMessage(
       WebSocketOnMessage event, Emitter<WebSocketState> emit) {
     try {
-      print(event.message);
+      if (event.message?['devTel'] == null) {
+        print(event.message);
+      }
+      //print(event.message);
       // Handle message if not null
       if (event.message != null) {
         if (event.message?['status'] != null) {
@@ -52,6 +56,10 @@ class WebSocketBloc extends Bloc<WebSocketEvent, WebSocketState> {
           final DeviceConfig config =
               DeviceConfig.fromJson(event.message['cfg']);
           emit(WebSocketMessageReadyDeviceConfig(config: config));
+        } else if (event.message?['micuM1State'] != null) {
+          final MicuM1State micuM1State =
+              MicuM1State.fromJson(event.message['micuM1State']);
+          emit(WebSocketMessageReadyMicuM1State(micuM1State: micuM1State));
         }
       }
 

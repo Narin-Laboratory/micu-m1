@@ -19,8 +19,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _doConnect() {
     context.read<AuthBloc>().add(AuthLocalOnSignOut());
-    context.read<AuthBloc>().add(
-        AuthLocalOnRequested(ip: _selectedDevice, webApiKey: "defaultkey"));
+    context
+        .read<AuthBloc>()
+        .add(AuthLocalOnRequested(ip: _selectedDevice, webApiKey: "smartgrow"));
   }
 
   @override
