@@ -262,40 +262,86 @@ class _M1ScreenState extends State<M1Screen> {
                     ]), // Add a select box of operation mode (Manual & Auto) here
                 const SizedBox(height: 20),
                 if (micuM1State.mode == 1)
-                  Row(
-                    mainAxisSize:
-                        MainAxisSize.min, // Added to allow row to shrink
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  Column(
                     children: [
-                      const Icon(
-                        Icons.content_cut_outlined,
-                        color: Colors.blueGrey,
-                        size: 120,
-                      ),
-                      const SizedBox(
-                          width: 16), // Add spacing between Icon and Text
-                      Column(
+                      Row(
                         mainAxisSize:
-                            MainAxisSize.min, // Added to allow column to shrink
-                        crossAxisAlignment: CrossAxisAlignment.center,
+                            MainAxisSize.min, // Added to allow row to shrink
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          const Text(
-                            'Siap panen dalam',
-                            style: TextStyle(
-                                color: Colors.greenAccent, fontSize: 18),
+                          const Icon(
+                            Icons.content_cut_outlined,
+                            color: Colors.blueGrey,
+                            size: 108,
                           ),
-                          Text(
-                            '$_dayToHarvest HARI',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 48),
-                          ),
-                          Text(
-                            '$_hourToHarvest Jam, $_minuteToHarvest Menit, $_secondToHarvest Detik',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 8),
+                          const SizedBox(
+                              width: 16), // Add spacing between Icon and Text
+                          Column(
+                            mainAxisSize: MainAxisSize
+                                .min, // Added to allow column to shrink
+                            crossAxisAlignment: CrossAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Siap panen dalam',
+                                style: TextStyle(
+                                    color: Colors.greenAccent, fontSize: 18),
+                              ),
+                              Text(
+                                '$_dayToHarvest HARI',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 48),
+                              ),
+                              Text(
+                                '$_hourToHarvest Jam, $_minuteToHarvest Menit, $_secondToHarvest Detik',
+                                style: const TextStyle(
+                                    color: Colors.grey, fontSize: 8),
+                              ),
+                            ],
                           ),
                         ],
                       ),
+                      const SizedBox(height: 20),
+                      Row(
+                          mainAxisSize:
+                              MainAxisSize.min, // Added to allow row to shrink
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            if (micuM1State.pumpState)
+                              const Icon(
+                                Icons.water_drop_outlined,
+                                color: Colors.greenAccent,
+                                size: 24,
+                              ),
+                            if (!micuM1State.pumpState)
+                              const Icon(
+                                Icons.water_drop_outlined,
+                                color: Colors.grey,
+                                size: 24,
+                              ),
+                            const SizedBox(
+                                width: 8), // Add spacing between Icon and Text
+                            Text(
+                              'Pompa ${micuM1State.pumpState ? "Nyala" : "Padam"}',
+                            ),
+                            const SizedBox(width: 20),
+                            if (micuM1State.growLightState)
+                              const Icon(
+                                Icons.lightbulb_circle_outlined,
+                                color: Colors.lightGreen,
+                                size: 24,
+                              ),
+                            if (!micuM1State.growLightState)
+                              const Icon(
+                                Icons.lightbulb_circle_outlined,
+                                color: Colors.lightGreen,
+                                size: 24,
+                              ),
+                            const SizedBox(
+                                width: 8), // Add spacing between Icon and Text
+                            Text(
+                              'Lampu ${micuM1State.growLightState ? "Nyala" : "Padam"}',
+                            ),
+                          ]),
                     ],
                   ),
                 if (micuM1State.mode == 0)
