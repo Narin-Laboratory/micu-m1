@@ -333,7 +333,7 @@ class _M1ScreenState extends State<M1Screen> {
                             if (!micuM1State.growLightState)
                               const Icon(
                                 Icons.lightbulb_circle_outlined,
-                                color: Colors.lightGreen,
+                                color: Colors.grey,
                                 size: 24,
                               ),
                             const SizedBox(
