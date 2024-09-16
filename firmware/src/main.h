@@ -50,7 +50,7 @@ struct Profile {
     String name;
     unsigned long incubationTS;
 };
-Profile profiles[20];
+Profile profiles[21];
 
 GenericConfig configHelper("/micu.json");
 

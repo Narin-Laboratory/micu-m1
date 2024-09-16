@@ -32,26 +32,27 @@ void setup() {
 
     setColor(5, 0, 0);
 
-    profiles[0] = {1, "Arugula", 1209600000};    // 14 days
-    profiles[1] = {2, "Broccoli", 864000000};     // 10 days
-    profiles[2] = {3, "Cabbage", 864000000};     // 10 days
-    profiles[3] = {4, "Cilantro", 1209600000};    // 14 days
-    profiles[4] = {5, "Kale", 1036800000};       // 12 days
-    profiles[5] = {6, "Kohlrabi", 604800000};     // 7 days
-    profiles[6] = {7, "Mustard", 691200000};     // 8 days
-    profiles[7] = {8, "Pea Shoots", 1209600000}; // 14 days
-    profiles[8] = {9, "Radish", 604800000};      // 7 days
-    profiles[9] = {10, "Sunflower", 864000000};   // 10 days
-    profiles[10] = {11, "Amaranth", 691200000};   // 8 days
-    profiles[11] = {12, "Beet", 1555200000};     // 18 days
-    profiles[12] = {13, "Buckwheat", 604800000};  // 7 days
-    profiles[13] = {14, "Chard", 1036800000};    // 12 days
-    profiles[14] = {15, "Chia", 691200000};      // 8 days
-    profiles[15] = {16, "Fenugreek", 691200000};  // 8 days
-    profiles[16] = {17, "Lettuce", 864000000};    // 10 days
-    profiles[17] = {18, "Mizuna", 864000000};    // 10 days
-    profiles[18] = {19, "Pak Choi", 864000000};   // 10 days
-    profiles[19] = {20, "Watercress", 691200000}; // 8 days
+    profiles[0] = {1, "Arugula", 14};    // 14 days
+    profiles[1] = {2, "Broccoli", 10};     // 10 days
+    profiles[2] = {3, "Cabbage", 10};     // 10 days
+    profiles[3] = {4, "Cilantro", 14};    // 14 days
+    profiles[4] = {5, "Kale", 12};       // 12 days
+    profiles[5] = {6, "Kohlrabi", 7};     // 7 days
+    profiles[6] = {7, "Mustard", 8};     // 8 days
+    profiles[7] = {8, "Pea Shoots", 14}; // 14 days
+    profiles[8] = {9, "Radish", 7};      // 7 days
+    profiles[9] = {10, "Sunflower", 10};   // 10 days
+    profiles[10] = {11, "Amaranth", 8};   // 8 days
+    profiles[11] = {12, "Beet", 18};     // 18 days
+    profiles[12] = {13, "Buckwheat", 7};  // 7 days
+    profiles[13] = {14, "Chard", 12};    // 12 days
+    profiles[14] = {15, "Chia", 8};      // 8 days
+    profiles[15] = {16, "Fenugreek", 8};  // 8 days
+    profiles[16] = {17, "Lettuce", 10};    // 10 days
+    profiles[17] = {18, "Mizuna", 10};    // 10 days
+    profiles[18] = {19, "Pak Choi", 10};   // 10 days
+    profiles[19] = {20, "Watercress", 8}; // 8 days
+    profiles[20] = {21, "Strawberry", 365}; // 365 days
 
     if(config.xSemaphoreGrowControl == NULL){config.xSemaphoreGrowControl = xSemaphoreCreateMutex();}
 
@@ -281,8 +282,8 @@ void _pvTaskCodeGrowControl(void*){
       time_t sowingTime = mktime(&timeinfo);
 
       // Calculate remaining time until harvest
-      if (config.selectedProfile >= 1 && config.selectedProfile <= 20) {
-        config.remainingTimeToHarvest = profiles[config.selectedProfile - 1].incubationTS / 1000 - (currentTime - sowingTime);
+      if (config.selectedProfile >= 1 && config.selectedProfile <= 21) {
+        config.remainingTimeToHarvest = (profiles[config.selectedProfile - 1].incubationTS * 24 * 3600) - (currentTime - sowingTime);
       } else {
         // Handle invalid selectedProfile value
       }
@@ -304,6 +305,7 @@ void _pvTaskCodeGrowControl(void*){
       } else {
         // Ready to harvest
         setColor(0, 255, 0); // Turn LED green for harvest
+        continue;
       }
 
       // Get the current hour
