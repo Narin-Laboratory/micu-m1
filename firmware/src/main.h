@@ -41,8 +41,6 @@ struct Config {
     uint8_t selectedProfile = 0;
     uint8_t mode = 0;
     long remainingTimeToHarvest = 0;
-
-    String label = "My MICU M1";
 };
 
 struct Profile {
