@@ -244,6 +244,11 @@ void _pvTaskCodeGrowControl(void*){
 
       // Parse the sowing datetime string into a tm struct
       struct tm timeinfo;
+      // Get the current hour
+      struct tm current_tm;
+      localtime_r(&currentTime, &current_tm);
+      int currentHour = current_tm.tm_hour;
+
       if (strptime(config.sowingDatetime.c_str(), "%Y-%m-%d %H:%M:%S", &timeinfo) != NULL) {
 
         // Convert the tm struct to seconds since epoch
@@ -277,30 +282,29 @@ void _pvTaskCodeGrowControl(void*){
           continue;
         }
 
-        // Get the current hour
-        struct tm current_tm;
-        localtime_r(&currentTime, &current_tm);
-        int currentHour = current_tm.tm_hour;
-
         // Check if it's daytime (6 AM - 6 PM)
         if (currentHour >= 6 && currentHour < 18) {
-            // Turn on the grow light
-            if (!config.growLightState) {
-                config.growLightBrightness = 100;
-                udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.growLightBrightnessPrev, config.growLightBrightness);
-            }
-        } else {
-            // Turn off the grow light
-            if (config.growLightState) {
-                config.growLightBrightness = 0;
-            }
+          
+          uint8_t intensity = calculateDaylightIntensity(current_tm);
+          config.growLightBrightness = intensity;
+          udawa.logger->debug(PSTR(__func__), PSTR("Daylight intensity: %d\n"), intensity);
+          if (!config.growLightState) {
+            udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.growLightBrightnessPrev, config.growLightBrightness);
+          }
+        } 
+        else {
+          // Turn off the grow light
+          if (config.growLightState) {
+            config.growLightBrightness = 0;
+          }
         }
 
         unsigned long currentMillis = millis();
         // Water the plants every 12 hours for 5 seconds
         if (currentHour % 12 == 0 && (currentMillis - config.pumpLastOn) > 60000) { // Only water every 60 seconds if the hour is right
           config.pumpPower = 100;
-          //udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
+          config.pumpLastOn = millis();
+          udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
         } else if (currentMillis - config.pumpLastOn > 5000 && config.pumpState){ // Turn off the pump after 5 seconds if it was turned on
           config.pumpPower = 0;
           //udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
@@ -390,4 +394,38 @@ void syncClientAttr(uint8_t direction){
     udawa.wsBroadcast(doc);
   }
   #endif
+}
+
+// Function to calculate daylight intensity based on real date and time
+int calculateDaylightIntensity(struct tm current_tm) {
+  // Define the start and end of daylight hours
+  int startHour = 6; // 6 AM
+  int endHour = 18; // 6 PM
+
+  // Calculate the total duration of daylight in hours
+  int daylightDuration = endHour - startHour;
+
+  // Calculate the midpoint of the daylight hours
+  int midDay = startHour + daylightDuration / 2; // Midday is at 12 PM
+
+  // Calculate the current hour
+  int currentHour = current_tm.tm_hour;
+
+  // Calculate the hour difference from midday
+  int hourFromMidDay = abs(currentHour - midDay);
+
+  // Define the maximum intensity at midday
+  int maxIntensity = 100;
+
+  // Calculate the intensity based on the time of day
+  int intensity = maxIntensity - (hourFromMidDay * (maxIntensity / (daylightDuration / 2)));
+
+  // Ensure the intensity is within the valid range
+  if (intensity < 0) {
+    intensity = 0;
+  } else if (intensity > maxIntensity) {
+    intensity = maxIntensity;
+  }
+
+  return intensity;
 }

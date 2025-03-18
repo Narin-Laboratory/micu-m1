@@ -67,3 +67,4 @@ void _pvTaskCodeGrowControl(void*);
 void loadConfig();
 void saveConfig();
 void syncClientAttr(uint8_t direction);
+int calculateDaylightIntensity(struct tm current_tm);

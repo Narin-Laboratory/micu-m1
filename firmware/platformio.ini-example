@@ -10,29 +10,27 @@
 
 [env:micum1]
 platform = espressif32
-board = esp32cam
+board = esp32doit-devkit-v1
 board_build.partitions = partitions_custom.csv
 board_build.filesystem = littlefs
-;board_build.arduino.extra_flags=-DARDUINO_TASK_STACK_SIZE= 12000;8192
 framework = arduino
 monitor_speed = 115200
 monitor_filters = esp32_exception_decoder
 upload_protocol = esptool
-upload_port = COM6
+upload_port = /dev/ttyUSB0
 ;upload_protocol = espota
-;upload_port = 192.168.177.125
+;upload_port = 192.168.4.1  ;gadadar4ch.local
 ;upload_flags =
 ;	--port=3232
-;	--auth=password
+;	--auth=harinama
+;	--host_port=3232
 build_flags =
 	${env.build_flags}
-	;-DARDUINO_TASK_STACK_SIZE=12000
 	-D=${PIOENV}
 	-DCORE_DEBUG_LEVEL=0
-	;-DBOARD_HAS_PSRAM
-	-mfix-esp32-psram-cache-issue
 	-I include         ; For your "include" directory
     -I .               ; Add this line to include the project root
     -I src             ; For your "src" directory (optional)
+	-I .pio/libdeps/Gadadar4Ch/libudawa-esp32/src
 lib_deps =
 	https://github.com/Narin-Laboratory/libudawa-esp32.git#gigarefactor
