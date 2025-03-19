@@ -34,6 +34,7 @@ struct Config {
     bool growLightState = false;
     bool pumpState = false;
     unsigned long pumpLastOn = 0;
+    bool fPumpActivated = false;
 
     uint8_t pumpPWMCutOff = 180;
 

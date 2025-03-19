@@ -284,7 +284,6 @@ void _pvTaskCodeGrowControl(void*){
 
         // Check if it's daytime (6 AM - 6 PM)
         if (currentHour >= 6 && currentHour < 18) {
-          
           uint8_t intensity = calculateDaylightIntensity(current_tm);
           config.growLightBrightness = intensity;
           udawa.logger->debug(PSTR(__func__), PSTR("Daylight intensity: %d\n"), intensity);
@@ -301,13 +300,18 @@ void _pvTaskCodeGrowControl(void*){
 
         unsigned long currentMillis = millis();
         // Water the plants every 12 hours for 5 seconds
-        if (currentHour % 12 == 0 && (currentMillis - config.pumpLastOn) > 60000) { // Only water every 60 seconds if the hour is right
+        if (currentHour % 12 == 0 && !config.fPumpActivated) { 
+          config.fPumpActivated = true;
           config.pumpPower = 100;
           config.pumpLastOn = millis();
-          udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
-        } else if (currentMillis - config.pumpLastOn > 5000 && config.pumpState){ // Turn off the pump after 5 seconds if it was turned on
+          udawa.logger->debug(PSTR(__func__), PSTR("currentHour: %d, fPumpActivated: %d\n"), currentHour, config.fPumpActivated);
+        } 
+        else{ 
+          if(currentHour > 12){
+            config.fPumpActivated = false;
+          }
           config.pumpPower = 0;
-          //udawa.logger->debug(PSTR(__func__), PSTR("before: %d, after: %d\n"), config.pumpPowerPrev, config.pumpPower);
+          udawa.logger->debug(PSTR(__func__), PSTR("currentHour: %d, fPumpActivated: %d\n"), currentHour, config.fPumpActivated);
         }
       } else {
         // Handle error: invalid sowing datetime
